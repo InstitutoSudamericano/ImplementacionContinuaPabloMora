@@ -20,6 +20,12 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @ApiOperation({ summary: 'Obtener resumen estadístico (Consultas Nativas SQL)' })
+  @Get('stats/summary')
+  getStatsSummary() {
+    return this.usersService.getStatsSummary();
+  }
+
   @ApiOperation({ summary: 'Obtener usuario por ID' })
   @ApiParam({ name: 'id', description: 'ID UUID del usuario' })
   @Get(':id')

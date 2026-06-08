@@ -67,4 +67,15 @@ export class UsersService {
     await this.findOne(id);
     return this.repository.delete(id);
   }
+
+  async getStatsSummary() {
+    const [subscriptions, topUsers] = await Promise.all([
+      this.repository.getSubscriptionStatsRaw(),
+      this.repository.getTopUsersByMatchesRaw(),
+    ]);
+    return {
+      subscriptions,
+      topUsers,
+    };
+  }
 }
