@@ -1,17 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InteractionType } from '@prisma/client';
-import { MatchRepository } from '../../matches/repositories/match.repository';
+import { InteractionType } from '@prisma/client-activity';
+import { PrismaActivityService } from '../../../prisma/prisma-activity.service';
 import { MatchesService } from '../../matches/services/matches.service';
-import { UserRepository } from '../../users/repositories/user.repository';
+import { UsersService } from '../../users/services/users.service';
 import { CreateInteractionDto } from '../dto/interaction.dto';
-import { InteractionRepository } from '../repositories/interaction.repository';
 
 @Injectable()
 export class InteractionsService {
   constructor(
-    private readonly repository: InteractionRepository,
-    private readonly userRepository: UserRepository,
-    private readonly matchRepository: MatchRepository,
+    private readonly prisma: PrismaActivityService,
+    private readonly usersService: UsersService,
     private readonly matchesService: MatchesService,
   ) {}
 
@@ -21,22 +19,29 @@ export class InteractionsService {
     }
 
     const [fromUser, toUser] = await Promise.all([
-      this.userRepository.findById(dto.fromUserId),
-      this.userRepository.findById(dto.toUserId),
+      this.usersService.findOne(dto.fromUserId).catch(() => null),
+      this.usersService.findOne(dto.toUserId).catch(() => null),
     ]);
 
     if (!fromUser || !toUser) {
       throw new BadRequestException('Ambos usuarios deben existir.');
     }
 
-    const interaction = await this.repository.upsert(dto);
+    const { fromUserId, toUserId, ...rest } = dto;
+    const interaction = await this.prisma.interaction.upsert({
+      where: { fromUserId_toUserId: { fromUserId, toUserId } },
+      update: rest,
+      create: dto,
+    });
 
     if (dto.type === InteractionType.LIKE) {
-      const reciprocalLike = await this.repository.findSpecific(
-        dto.toUserId,
-        dto.fromUserId,
-        InteractionType.LIKE,
-      );
+      const reciprocalLike = await this.prisma.interaction.findFirst({
+        where: {
+          fromUserId: dto.toUserId,
+          toUserId: dto.fromUserId,
+          type: InteractionType.LIKE,
+        },
+      });
 
       if (reciprocalLike) {
         const match = await this.matchesService.createCanonical(
@@ -59,11 +64,16 @@ export class InteractionsService {
   }
 
   findByUser(userId: string) {
-    return this.repository.findByUser(userId);
+    return this.prisma.interaction.findMany({
+      where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
+      orderBy: { updatedAt: 'desc' },
+    });
   }
 
   async findExistingMatch(userOneId: string, userTwoId: string) {
     const [userAId, userBId] = [userOneId, userTwoId].sort();
-    return this.matchRepository.findByUsers(userAId, userBId);
+    return this.prisma.match.findUnique({
+      where: { userAId_userBId: { userAId, userBId } },
+    });
   }
 }

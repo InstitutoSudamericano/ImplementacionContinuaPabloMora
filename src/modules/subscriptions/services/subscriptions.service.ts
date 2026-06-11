@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SubscriptionRepository } from '../repositories/subscription.repository';
+import { PrismaUsersService } from '../../../prisma/prisma-users.service';
 import {
   CreateSubscriptionDto,
   UpdateSubscriptionDto,
@@ -7,18 +7,18 @@ import {
 
 @Injectable()
 export class SubscriptionsService {
-  constructor(private readonly repository: SubscriptionRepository) {}
+  constructor(private readonly prisma: PrismaUsersService) {}
 
   create(dto: CreateSubscriptionDto) {
-    return this.repository.create(dto);
+    return this.prisma.subscription.create({ data: dto });
   }
 
   findAll() {
-    return this.repository.findAll();
+    return this.prisma.subscription.findMany({ orderBy: { price: 'asc' } });
   }
 
   async findOne(id: string) {
-    const subscription = await this.repository.findById(id);
+    const subscription = await this.prisma.subscription.findUnique({ where: { id } });
     if (!subscription) {
       throw new NotFoundException('Suscripcion no encontrada.');
     }
@@ -27,11 +27,11 @@ export class SubscriptionsService {
 
   async update(id: string, dto: UpdateSubscriptionDto) {
     await this.findOne(id);
-    return this.repository.update(id, dto);
+    return this.prisma.subscription.update({ where: { id }, data: dto });
   }
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.repository.delete(id);
+    return this.prisma.subscription.delete({ where: { id } });
   }
 }

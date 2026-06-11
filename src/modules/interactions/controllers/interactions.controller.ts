@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { InteractionType } from '@prisma/client';
+import { InteractionType } from '@prisma/client-activity';
 import { CreateInteractionDto, InteractionActionDto } from '../dto/interaction.dto';
 import { InteractionsService } from '../services/interactions.service';
 

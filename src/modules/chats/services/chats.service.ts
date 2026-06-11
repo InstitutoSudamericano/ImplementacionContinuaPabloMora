@@ -1,31 +1,38 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { MatchRepository } from '../../matches/repositories/match.repository';
-import { UserRepository } from '../../users/repositories/user.repository';
+import { PrismaActivityService } from '../../../prisma/prisma-activity.service';
+import { UsersService } from '../../users/services/users.service';
 import { CreateChatDto, CreateMessageDto } from '../dto/chat.dto';
-import { ChatRepository } from '../repositories/chat.repository';
 
 @Injectable()
 export class ChatsService {
   constructor(
-    private readonly repository: ChatRepository,
-    private readonly matchRepository: MatchRepository,
-    private readonly userRepository: UserRepository,
+    private readonly prisma: PrismaActivityService,
+    private readonly usersService: UsersService,
   ) {}
 
   async createChat(dto: CreateChatDto) {
     const match = await this.findMatch(dto.matchId);
-    const existingChat = await this.repository.findByMatchId(dto.matchId);
+    const existingChat = await this.prisma.chat.findUnique({
+      where: { matchId: dto.matchId },
+      include: { match: true, messages: { orderBy: { createdAt: 'asc' } } },
+    });
 
     if (existingChat) {
       return existingChat;
     }
 
-    return this.repository.create(match.id);
+    return this.prisma.chat.create({
+      data: { matchId: match.id },
+      include: { match: true, messages: true },
+    });
   }
 
   async getChatByMatch(matchId: string) {
     await this.findMatch(matchId);
-    const chat = await this.repository.findByMatchId(matchId);
+    const chat = await this.prisma.chat.findUnique({
+      where: { matchId },
+      include: { match: true, messages: { orderBy: { createdAt: 'asc' } } },
+    });
     if (!chat) {
       throw new NotFoundException('No existe un chat para ese match.');
     }
@@ -33,7 +40,10 @@ export class ChatsService {
   }
 
   async getMessages(chatId: string) {
-    const chat = await this.repository.findById(chatId);
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      include: { match: true, messages: { orderBy: { createdAt: 'asc' } } },
+    });
     if (!chat) {
       throw new NotFoundException('Chat no encontrado.');
     }
@@ -41,12 +51,15 @@ export class ChatsService {
   }
 
   async createMessage(chatId: string, dto: CreateMessageDto) {
-    const chat = await this.repository.findById(chatId);
+    const chat = await this.prisma.chat.findUnique({
+      where: { id: chatId },
+      include: { match: true, messages: { orderBy: { createdAt: 'asc' } } },
+    });
     if (!chat) {
       throw new NotFoundException('Chat no encontrado.');
     }
 
-    const sender = await this.userRepository.findById(dto.senderId);
+    const sender = await this.usersService.findOne(dto.senderId).catch(() => null);
     if (!sender) {
       throw new NotFoundException('Remitente no encontrado.');
     }
@@ -61,11 +74,17 @@ export class ChatsService {
       );
     }
 
-    return this.repository.createMessage(chatId, dto.senderId, dto.content);
+    return this.prisma.message.create({
+      data: { chatId, senderId: dto.senderId, content: dto.content },
+      include: { chat: true },
+    });
   }
 
   private async findMatch(matchId: string) {
-    const match = await this.matchRepository.findById(matchId);
+    const match = await this.prisma.match.findUnique({
+      where: { id: matchId },
+      include: { chat: true },
+    });
 
     if (!match) {
       throw new NotFoundException('Match no encontrado.');

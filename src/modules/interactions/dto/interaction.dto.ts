@@ -1,4 +1,4 @@
-import { InteractionType } from '@prisma/client';
+import { InteractionType } from '@prisma/client-activity';
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class CreateInteractionDto {

@@ -9,8 +9,12 @@
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
-    "prisma:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "prisma:generate:users": "prisma generate --schema=prisma/users/schema.prisma",
+    "prisma:generate:activity": "prisma generate --schema=prisma/activity/schema.prisma",
+    "prisma:generate": "npm run prisma:generate:users && npm run prisma:generate:activity",
+    "db:push:users": "prisma db push --schema=prisma/users/schema.prisma",
+    "db:push:activity": "prisma db push --schema=prisma/activity/schema.prisma",
+    "db:push": "npm run db:push:users && npm run db:push:activity",
     "db:seed": "prisma db seed"
   },
   "prisma": {

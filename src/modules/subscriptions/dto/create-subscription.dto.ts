@@ -1,4 +1,4 @@
-import { SubscriptionType } from '@prisma/client';
+import { SubscriptionType } from '@prisma/client-users';
 import { Type } from 'class-transformer';
 import {
   ArrayNotEmpty,

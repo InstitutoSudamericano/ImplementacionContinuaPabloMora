@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-users"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_USERS_URL")
+}
+
+enum SubscriptionType {
+  FREE
+  GOLD
+  PREMIUM
+  PLATINO
+  BRONCE
+}
+
+model Subscription {
+  id           String           @id @default(uuid())
+  name         SubscriptionType @unique
+  benefits     String[]
+  restrictions String[]
+  price        Decimal          @db.Decimal(10, 2)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  users        User[]
+}
+
+model User {
+  id                   String        @id @default(uuid())
+  nombre               String
+  edad                 Int
+  biografia            String?
+  peso                 Float?
+  altura               Float?
+  nacionalidad         String?
+  genero               String?
+  ciudad               String?
+  pais                 String?
+  email                String        @unique
+  password             String
+  fotos                String[]
+  suscripcionId        String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  subscription         Subscription? @relation(fields: [suscripcionId], references: [id])
+  userRoles            UserRole[]
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  userRoles   UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  role      Role     @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}

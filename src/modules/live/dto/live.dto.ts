@@ -1,4 +1,4 @@
-import { LiveSessionState } from '@prisma/client';
+import { LiveSessionState } from '@prisma/client-activity';
 import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class UpsertLiveStatusDto {
