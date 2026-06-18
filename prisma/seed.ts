@@ -1,4 +1,4 @@
-import { PrismaClient, SubscriptionType } from '@prisma/client';
+import { PrismaClient, SubscriptionType } from '@prisma/client-users';
 
 const prisma = new PrismaClient();
 
