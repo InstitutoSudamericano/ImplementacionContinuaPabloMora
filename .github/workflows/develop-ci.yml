@@ -5,6 +5,10 @@ on:
     branches:
       - develop
 
+env:
+  DATABASE_USERS_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+  DATABASE_ACTIVITY_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
