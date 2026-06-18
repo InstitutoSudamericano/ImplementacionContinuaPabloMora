@@ -5,8 +5,12 @@ on:
     branches:
       - 'feature/**'
 
+env:
+  DATABASE_USERS_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+  DATABASE_ACTIVITY_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
 jobs:
-  lint-and-build:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,11 +20,14 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Puedes ajustar la versión de Node según necesites
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
 
       - name: Build Project
         run: npm run build
