@@ -1,0 +1,36 @@
+name: Main CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Deploy to Production
+        run: |
+          echo "Aquí deberás configurar tu proceso de despliegue."
+          echo "Por ejemplo, si usas Render, podrías hacer un webhook curl:"
+          # curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+          echo "Despliegue simulado ejecutado correctamente."
