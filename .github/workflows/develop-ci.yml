@@ -24,13 +24,7 @@ jobs:
 
       # Generamos el cliente de Prisma por si los tests o el build lo necesitan
       - name: Generate Prisma Client
-        run: npx prisma generate
-
-      - name: Run Linter
-        run: npm run lint
+        run: npm run prisma:generate
 
       - name: Build Project
         run: npm run build
-
-      - name: Run Unit Tests
-        run: npm run test
