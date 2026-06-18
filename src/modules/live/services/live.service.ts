@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { LiveSessionState } from '@prisma/client-activity';
-import { PrismaActivityService } from '../../../prisma/prisma-activity.service';
+import { LiveRepository } from '../repositories/live.repository';
 import { UsersService } from '../../users/services/users.service';
 import {
   CreateLiveSessionDto,
@@ -11,24 +11,20 @@ import {
 @Injectable()
 export class LiveService {
   constructor(
-    private readonly prisma: PrismaActivityService,
+    private readonly liveRepository: LiveRepository,
     private readonly usersService: UsersService,
   ) {}
 
   async upsertStatus(dto: UpsertLiveStatusDto) {
     await this.ensureUserExists(dto.userId);
     const { userId, ...statusFields } = dto;
-    return this.prisma.liveStatus.upsert({
-      where: { userId },
-      update: statusFields,
-      create: dto,
-    });
+    return this.liveRepository.upsertStatus(dto.userId, dto, statusFields);
   }
 
   async getStatus(userId: string) {
     await this.ensureUserExists(userId);
     return (
-      (await this.prisma.liveStatus.findUnique({ where: { userId } })) ?? {
+      (await this.liveRepository.findStatusByUser(userId)) ?? {
         userId,
         isOnline: false,
         isLiveEnabled: false,
@@ -41,44 +37,36 @@ export class LiveService {
     await this.ensureUserExists(dto.userId);
 
     const now = new Date();
-    return this.prisma.liveSession.create({
-      data: {
-        ...dto,
-        status: dto.status ?? LiveSessionState.CREATED,
-        ...(dto.status === LiveSessionState.LIVE ? { startedAt: now } : {}),
-        ...(dto.status === LiveSessionState.ENDED ? { endedAt: now } : {}),
-      }
+    return this.liveRepository.createSession({
+      ...dto,
+      status: dto.status ?? LiveSessionState.CREATED,
+      ...(dto.status === LiveSessionState.LIVE ? { startedAt: now } : {}),
+      ...(dto.status === LiveSessionState.ENDED ? { endedAt: now } : {}),
     });
   }
 
   async findSessionsByUser(userId: string) {
     await this.ensureUserExists(userId);
-    return this.prisma.liveSession.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.liveRepository.findSessionsByUser(userId);
   }
 
   async updateSession(id: string, dto: UpdateLiveSessionDto) {
     const existing = await this.findSession(id);
     const now = new Date();
 
-    return this.prisma.liveSession.update({
-      where: { id },
-      data: {
-        ...dto,
-        startedAt:
-          dto.status === LiveSessionState.LIVE && !existing.startedAt
-            ? now
-            : existing.startedAt,
-        endedAt: dto.status === LiveSessionState.ENDED ? now : existing.endedAt,
-      }
+    return this.liveRepository.updateSession(id, {
+      ...dto,
+      startedAt:
+        dto.status === LiveSessionState.LIVE && !existing.startedAt
+          ? now
+          : existing.startedAt,
+      endedAt: dto.status === LiveSessionState.ENDED ? now : existing.endedAt,
     });
   }
 
   async removeSession(id: string) {
     await this.findSession(id);
-    return this.prisma.liveSession.delete({ where: { id } });
+    return this.liveRepository.removeSession(id);
   }
 
   private async ensureUserExists(userId: string) {
@@ -86,7 +74,7 @@ export class LiveService {
   }
 
   private async findSession(id: string) {
-    const session = await this.prisma.liveSession.findUnique({ where: { id } });
+    const session = await this.liveRepository.findSessionById(id);
     if (!session) {
       throw new NotFoundException('Sesion live no encontrada.');
     }

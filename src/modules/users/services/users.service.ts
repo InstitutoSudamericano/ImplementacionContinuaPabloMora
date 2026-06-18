@@ -1,10 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaUsersService } from '../../../prisma/prisma-users.service';
+import { UserRepository } from '../repositories/users.repository';
 import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaUsersService) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   async create(dto: CreateUserDto) {
     const existingUser = await this.findByEmailSilent(dto.email);
@@ -13,35 +13,21 @@ export class UsersService {
     }
 
     if (dto.suscripcionId) {
-      const subscription = await this.prisma.subscription.findUnique({
-        where: { id: dto.suscripcionId },
-      });
+      const subscription = await this.userRepository.findSubscriptionById(dto.suscripcionId);
       if (!subscription) {
         throw new NotFoundException('La suscripcion indicada no existe.');
       }
     }
 
-    return this.prisma.user.create({
-      data: dto,
-      include: { subscription: true },
-    });
+    return this.userRepository.create(dto);
   }
 
   findAll() {
-    return this.prisma.user.findMany({
-      include: { subscription: true },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.userRepository.findAll();
   }
 
   async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        subscription: true,
-        userRoles: { include: { role: true } },
-      },
-    });
+    const user = await this.userRepository.findById(id);
     if (!user) {
       throw new NotFoundException('Usuario no encontrado.');
     }
@@ -49,10 +35,7 @@ export class UsersService {
   }
 
   async findByEmailSilent(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: { userRoles: { include: { role: true } } },
-    });
+    return this.userRepository.findByEmailSilent(email);
   }
 
   async findByEmail(email: string) {
@@ -67,48 +50,21 @@ export class UsersService {
     await this.findOne(id);
 
     if (dto.suscripcionId) {
-      const subscription = await this.prisma.subscription.findUnique({
-        where: { id: dto.suscripcionId },
-      });
+      const subscription = await this.userRepository.findSubscriptionById(dto.suscripcionId);
       if (!subscription) {
         throw new NotFoundException('La suscripcion indicada no existe.');
       }
     }
 
-    return this.prisma.user.update({
-      where: { id },
-      data: dto,
-      include: { subscription: true },
-    });
+    return this.userRepository.update(id, dto);
   }
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.user.delete({ where: { id } });
+    return this.userRepository.remove(id);
   }
 
   async getStatsSummary() {
-    const [subscriptions, topUsers] = await Promise.all([
-      this.prisma.$queryRaw`
-        SELECT 
-          s."name" AS "subscriptionType", 
-          COUNT(u."id")::INT AS "userCount",
-          (s."price" * COUNT(u."id"))::FLOAT AS "estimatedRevenue"
-        FROM "Subscription" s
-        LEFT JOIN "User" u ON u."suscripcionId" = s."id"
-        GROUP BY s."id", s."name", s."price"
-        ORDER BY "userCount" DESC;
-      `,
-      this.prisma.user.findMany({ take: 5 }).then(users => users.map(u => ({
-        id: u.id,
-        nombre: u.nombre,
-        email: u.email,
-        matchCount: 0
-      }))),
-    ]);
-    return {
-      subscriptions,
-      topUsers,
-    };
+    return this.userRepository.getStatsSummary();
   }
 }

@@ -1,20 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaActivityService } from '../../../prisma/prisma-activity.service';
+import { MatchesRepository } from '../repositories/matches.repository';
 import { UsersService } from '../../users/services/users.service';
 
 @Injectable()
 export class MatchesService {
   constructor(
-    private readonly prisma: PrismaActivityService,
+    private readonly matchesRepository: MatchesRepository,
     private readonly usersService: UsersService,
   ) {}
 
   async findByUser(userId: string) {
-    const matches = await this.prisma.match.findMany({
-      where: { OR: [{ userAId: userId }, { userBId: userId }] },
-      include: { chat: { include: { messages: { orderBy: { createdAt: 'asc' } } } } },
-      orderBy: { createdAt: 'desc' },
-    });
+    const matches = await this.matchesRepository.findByUser(userId);
     
     // Enrich with user info since they are in a separate DB
     const enrichedMatches = await Promise.all(
@@ -44,18 +40,12 @@ export class MatchesService {
 
   async createCanonical(userOneId: string, userTwoId: string) {
     const [userAId, userBId] = [userOneId, userTwoId].sort();
-    const existingMatch = await this.prisma.match.findUnique({
-      where: { userAId_userBId: { userAId, userBId } },
-      include: { chat: true },
-    });
+    const existingMatch = await this.matchesRepository.findByUsersCanonical(userAId, userBId);
 
     if (existingMatch) {
       return existingMatch;
     }
 
-    return this.prisma.match.create({
-      data: { userAId, userBId },
-      include: { chat: true },
-    });
+    return this.matchesRepository.createCanonical(userAId, userBId);
   }
 }
